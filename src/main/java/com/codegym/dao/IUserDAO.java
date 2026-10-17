@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface IUserDAO {
 
+    void insertUpdateUseTransaction() throws SQLException;
+    
     // Thêm người dùng bằng PreparedStatement
     void insertUser(User user) throws SQLException;
 

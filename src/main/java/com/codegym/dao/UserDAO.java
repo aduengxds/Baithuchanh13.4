@@ -41,9 +41,10 @@ public class UserDAO implements IUserDAO {
     private static final String DELETE_USER =
             "DELETE FROM users WHERE id = ?";
 
-    // SQL cho bài 13.3: thực thi không sử dụng Transaction
+    // SQL dùng cho bài 13.3 và 13.4.
     private static final String SQL_INSERT =
-            "INSERT INTO Employee (name, salary, created_Date) VALUES (?, ?, ?)";
+            "INSERT INTO Employee (name, salary, created_Date) "
+            + "VALUES (?, ?, ?)";
 
     private static final String SQL_UPDATE =
             "UPDATE Employee SET salary = ? WHERE name = ?";
@@ -55,12 +56,12 @@ public class UserDAO implements IUserDAO {
             + "salary DECIMAL(15, 2) NOT NULL,"
             + "created_Date TIMESTAMP,"
             + "PRIMARY KEY (id)"
-            + ")";
+            + ") ENGINE=InnoDB";
 
     private static final String SQL_TABLE_DROP =
             "DROP TABLE IF EXISTS Employee";
 
-    // Tạo kết nối đến MySQL
+    // Tạo kết nối đến MySQL.
     private Connection getConnection() throws SQLException {
         return DriverManager.getConnection(
                 JDBC_URL,
@@ -69,7 +70,7 @@ public class UserDAO implements IUserDAO {
         );
     }
 
-    // Lấy toàn bộ người dùng
+    // Lấy toàn bộ người dùng.
     @Override
     public List<User> selectAllUsers() {
         List<User> users = new ArrayList<>();
@@ -91,7 +92,7 @@ public class UserDAO implements IUserDAO {
         return users;
     }
 
-    // Lấy người dùng theo ID bằng PreparedStatement
+    // Lấy người dùng theo ID bằng PreparedStatement.
     @Override
     public User selectUser(int id) {
         try (Connection connection = getConnection();
@@ -114,7 +115,7 @@ public class UserDAO implements IUserDAO {
         return null;
     }
 
-    // Lấy người dùng theo ID bằng Stored Procedure
+    // Lấy người dùng theo ID bằng Stored Procedure.
     @Override
     public User getUserById(int id) {
         String sql = "{CALL get_user_by_id(?)}";
@@ -144,7 +145,7 @@ public class UserDAO implements IUserDAO {
         return null;
     }
 
-    // Thêm người dùng bằng PreparedStatement
+    // Thêm người dùng bằng PreparedStatement.
     @Override
     public void insertUser(User user) throws SQLException {
         try (Connection connection = getConnection();
@@ -159,7 +160,7 @@ public class UserDAO implements IUserDAO {
         }
     }
 
-    // Thêm người dùng bằng Stored Procedure
+    // Thêm người dùng bằng Stored Procedure.
     @Override
     public void insertUserStore(User user) throws SQLException {
         String sql = "{CALL insert_user(?, ?, ?)}";
@@ -176,7 +177,7 @@ public class UserDAO implements IUserDAO {
         }
     }
 
-    // Cập nhật người dùng
+    // Cập nhật người dùng.
     @Override
     public boolean updateUser(User user) throws SQLException {
         try (Connection connection = getConnection();
@@ -192,7 +193,7 @@ public class UserDAO implements IUserDAO {
         }
     }
 
-    // Xóa người dùng
+    // Xóa người dùng.
     @Override
     public boolean deleteUser(int id) throws SQLException {
         try (Connection connection = getConnection();
@@ -205,7 +206,7 @@ public class UserDAO implements IUserDAO {
         }
     }
 
-    // Tìm kiếm người dùng theo quốc gia
+    // Tìm kiếm người dùng theo quốc gia.
     @Override
     public List<User> searchByCountry(String country)
             throws SQLException {
@@ -230,7 +231,7 @@ public class UserDAO implements IUserDAO {
         return users;
     }
 
-    // Sắp xếp người dùng theo tên A-Z
+    // Sắp xếp người dùng theo tên A-Z.
     @Override
     public List<User> sortByName() throws SQLException {
         List<User> users = new ArrayList<>();
@@ -249,7 +250,7 @@ public class UserDAO implements IUserDAO {
         return users;
     }
 
-    // Bài 13.3: Thực thi SQL không sử dụng Transaction
+    // Bài 13.3: Thực thi SQL không sử dụng Transaction.
     @Override
     public void insertUpdateWithoutTransaction()
             throws SQLException {
@@ -257,15 +258,12 @@ public class UserDAO implements IUserDAO {
         try (Connection conn = getConnection();
              Statement statement = conn.createStatement()) {
 
-            // Không tắt auto-commit.
-            // Mỗi câu lệnh SQL thành công được commit riêng.
-            System.out.println("Auto-commit: " + conn.getAutoCommit());
+            System.out.println(
+                    "Auto-commit: " + conn.getAutoCommit());
 
-            // Xóa bảng cũ và tạo bảng mới
             statement.execute(SQL_TABLE_DROP);
             statement.execute(SQL_TABLE_CREATE);
 
-            // INSERT nhân viên thứ nhất
             try (PreparedStatement psInsert =
                          conn.prepareStatement(SQL_INSERT)) {
 
@@ -274,50 +272,120 @@ public class UserDAO implements IUserDAO {
                         2, new BigDecimal("10.00"));
                 psInsert.setTimestamp(
                         3, Timestamp.valueOf(LocalDateTime.now()));
-
                 psInsert.executeUpdate();
 
                 System.out.println("Đã INSERT nhân viên Quynh.");
 
-                // INSERT nhân viên thứ hai
                 psInsert.setString(1, "Ngan");
                 psInsert.setBigDecimal(
                         2, new BigDecimal("20.00"));
                 psInsert.setTimestamp(
                         3, Timestamp.valueOf(LocalDateTime.now()));
-
                 psInsert.executeUpdate();
 
                 System.out.println("Đã INSERT nhân viên Ngan.");
             }
 
-            // Cố tình làm UPDATE thất bại
             try (PreparedStatement psUpdate =
                          conn.prepareStatement(SQL_UPDATE)) {
 
-                // Lỗi chủ đích: tham số 1 (salary) chưa được gán.
+                // Cố tình không gán tham số số 1.
                 psUpdate.setBigDecimal(
                         2, new BigDecimal("999.99"));
                 psUpdate.setString(2, "Quynh");
 
-                // Dự kiến SQLException xảy ra tại đây
                 psUpdate.executeUpdate();
 
             } catch (SQLException e) {
                 System.out.println(
-                        "UPDATE thất bại như dự kiến do thiếu tham số."
-                );
+                        "UPDATE thất bại như dự kiến do thiếu tham số.");
                 e.printStackTrace();
             }
 
-            // Hai INSERT đã commit không bị rollback
             System.out.println(
-                    "Kiểm thử hoàn tất. Hãy kiểm tra bảng Employee."
-            );
+                    "Kiểm thử không Transaction hoàn tất.");
         }
     }
 
-    // Bài 13.2: Thêm User và gán Permission trong cùng Transaction
+    // Bài 13.4: Thực thi SQL có sử dụng Transaction.
+    @Override
+    public void insertUpdateUseTransaction() throws SQLException {
+        try (Connection conn = getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+
+            try {
+                // Bắt đầu Transaction.
+                conn.setAutoCommit(false);
+
+                // Chuẩn bị bảng kiểm thử.
+                // Lưu ý: DDL trong MySQL có thể implicit commit.
+                try (Statement statement = conn.createStatement()) {
+                    statement.execute(SQL_TABLE_DROP);
+                    statement.execute(SQL_TABLE_CREATE);
+                }
+
+                // Hai câu lệnh INSERT.
+                try (PreparedStatement psInsert =
+                             conn.prepareStatement(SQL_INSERT)) {
+
+                    psInsert.setString(1, "Quynh");
+                    psInsert.setBigDecimal(
+                            2, new BigDecimal("10.00"));
+                    psInsert.setTimestamp(
+                            3, Timestamp.valueOf(LocalDateTime.now()));
+                    psInsert.executeUpdate();
+
+                    System.out.println("Đã INSERT nhân viên Quynh.");
+
+                    psInsert.setString(1, "Ngan");
+                    psInsert.setBigDecimal(
+                            2, new BigDecimal("20.00"));
+                    psInsert.setTimestamp(
+                            3, Timestamp.valueOf(LocalDateTime.now()));
+                    psInsert.executeUpdate();
+
+                    System.out.println("Đã INSERT nhân viên Ngan.");
+                }
+
+                // Cố tình gây lỗi trong lần kiểm thử rollback.
+                try (PreparedStatement psUpdate =
+                             conn.prepareStatement(SQL_UPDATE)) {
+
+                    // THỬ NGHIỆM ROLLBACK:
+                    // Sai index; tham số salary số 1 chưa được gán.
+                    psUpdate.setBigDecimal(
+                            2, new BigDecimal("999.99"));
+                    psUpdate.setString(2, "Quynh");
+
+                    psUpdate.executeUpdate();
+                }
+
+                // Chỉ chạy khi tất cả câu lệnh thành công.
+                conn.commit();
+                System.out.println("Transaction thành công: COMMIT.");
+
+            } catch (SQLException e) {
+                try {
+                    conn.rollback();
+                    System.out.println(
+                            "Transaction thất bại: đã ROLLBACK.");
+                } catch (SQLException rollbackError) {
+                    e.addSuppressed(rollbackError);
+                }
+
+                throw e;
+
+            } finally {
+                // Khôi phục trạng thái auto-commit ban đầu.
+                if (!conn.isClosed()
+                        && conn.getAutoCommit() != originalAutoCommit) {
+                    conn.setAutoCommit(originalAutoCommit);
+                }
+            }
+        }
+    }
+
+    // Bài 13.2: Thêm User và gán Permission trong cùng Transaction.
     @Override
     public void addUserTransaction(
             User user,
@@ -331,12 +399,11 @@ public class UserDAO implements IUserDAO {
             connection = getConnection();
             originalAutoCommit = connection.getAutoCommit();
 
-            // Bắt đầu Transaction
             connection.setAutoCommit(false);
 
             int userId;
 
-            // 1. Thêm User và lấy ID tự sinh
+            // 1. Thêm User và lấy ID tự sinh.
             try (PreparedStatement statement =
                          connection.prepareStatement(
                                  INSERT_USER,
@@ -350,22 +417,20 @@ public class UserDAO implements IUserDAO {
 
                 if (affectedRows == 0) {
                     throw new SQLException(
-                            "Thêm User thất bại, không có dòng nào được ghi."
-                    );
+                            "Thêm User thất bại, không có dòng nào được ghi.");
                 }
 
                 try (ResultSet rs = statement.getGeneratedKeys()) {
                     if (!rs.next()) {
                         throw new SQLException(
-                                "Không lấy được ID của User vừa tạo."
-                        );
+                                "Không lấy được ID của User vừa tạo.");
                     }
 
                     userId = rs.getInt(1);
                 }
             }
 
-            // 2. Gán các quyền cho User
+            // 2. Gán các quyền cho User.
             if (permissionIds != null && permissionIds.length > 0) {
                 String insertPermissionSql =
                         "INSERT INTO user_permission "
@@ -383,11 +448,10 @@ public class UserDAO implements IUserDAO {
                 }
             }
 
-            // 3. Tất cả thành công thì commit
+            // 3. Commit nếu tất cả thành công.
             connection.commit();
 
         } catch (SQLException e) {
-            // Có lỗi thì rollback toàn bộ Transaction
             if (connection != null) {
                 try {
                     connection.rollback();
@@ -401,20 +465,19 @@ public class UserDAO implements IUserDAO {
         } finally {
             if (connection != null) {
                 try {
-                    connection.setAutoCommit(originalAutoCommit);
-                } catch (SQLException e) {
-                    System.err.println(
-                            "Không thể khôi phục auto-commit: "
-                            + e.getMessage()
-                    );
+                    if (!connection.isClosed()
+                            && connection.getAutoCommit()
+                            != originalAutoCommit) {
+                        connection.setAutoCommit(originalAutoCommit);
+                    }
+                } finally {
+                    connection.close();
                 }
-
-                connection.close();
             }
         }
     }
 
-    // Chuyển một dòng ResultSet thành đối tượng User
+    // Chuyển ResultSet thành đối tượng User.
     private User mapUser(ResultSet rs) throws SQLException {
         return new User(
                 rs.getInt("id"),
